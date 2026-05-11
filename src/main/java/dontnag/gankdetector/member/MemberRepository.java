@@ -1,90 +1,60 @@
 package dontnag.gankdetector.member;
 
+import dontnag.gankdetector.common.GankRepository;
 import dontnag.gankdetector.member.dto.Member;
+
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
-
 @Repository
-public class MemberRepository {
-
-    private final JdbcTemplate template;
+public class MemberRepository extends GankRepository<Member> {
 
     public MemberRepository(JdbcTemplate template){
-        this.template = template;
+        super(template);
     }
 
-    public List<Member> getMembers(long limit, long offset){
-        String sql = """
-            SELECT *
-            FROM member
-            ORDER BY id
-            LIMIT ? OFFSET ?;
-            """;
-        return template.query(
-            sql,
-            new MemberRowMapper(),
-            limit,
-            offset
-        );
-    }
-
-    public List<Member> getMembersByUsername(long limit, long offset, String username){
-        String sql = """
-            SELECT *
-            FROM member
-            WHERE username LIKE ?
-            ORDER BY id
-            LIMIT ? OFFSET ?;
-            """;
-        return template.query(
-            sql,
-            new MemberRowMapper(),
-            "%" + username + "%",
-            limit,
-            offset
-        );
-    }
-
-    public List<Member> getMemberById(long id){
-        String sql = """
-            SELECT *
-            FROM member
-            WHERE id = ?
-            """;
-        return template.query(sql, new MemberRowMapper(), id);
-    }
-
-    public int updateMember(long id, Member member){
+    @Override
+    public int updateEntity(long id, Member entity){
         String sql = """
             UPDATE member
             SET
-                username = COALESCE(?, username),
+                name = COALESCE(?, name),
                 password = COALESCE(?, password),
                 role = COALESCE(?, role),
                 valid = COALESCE(?, valid)
             WHERE id = ?;
             """;
         return template.update(sql,
-            member.username(),
-            member.password(),
-            member.safeRole(),
-            member.valid(),
+            entity.username(),
+            entity.password(),
+            entity.safeRole(),
+            entity.valid(),
             id
         );
     }
 
-    public int addMember(String username, String password, Role role){
+    @Override
+    public int addEntity(Member entity){
         String sql = """
             INSERT INTO member
             VALUES (NULL, ?, ?, ?, CURRENT_TIMESTAMP, 1);
             """;
         return template.update(
             sql,
-            username,
-            password,
-            role.toString()
+            entity.username(),
+            entity.password(),
+            entity.role().toString()
         );
+    }
+
+    @Override
+    protected String tableName() {
+        return "member";
+    }
+
+    @Override
+    protected RowMapper<Member> rowMapper() {
+        return new MemberRowMapper();
     }
 }
